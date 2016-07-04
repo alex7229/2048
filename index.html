@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>2048</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="main.css"/>
+        <script src="jquery-3.0.0.min.js"></script>
+        <script src="main.js"></script>
+    </head>
+    <body>
+        <div id="settings">
+            <div>Choose ur settings</div>
+            <button  type="button" onclick="game.setFieldSize(4)">4*4</button>
+            <button  type="button" onclick="game.setFieldSize(5)">5*5</button>
+            <button  type="button" onclick="game.setFieldSize(6)">6*6</button>
+            <button  type="button" onclick="game.setFieldSize(8)">8*8</button>
+            <button id="startButton" type="button" onclick="game.start()">Start game</button>
+            <button type="button" onclick="game.fillRandomCell(2)">addRandomCell</button>
+        </div>
+        <div id="gameContainer">
+            <div  class="backgroundCell">2</div>
+        </div>
+    </body>
+</html>
