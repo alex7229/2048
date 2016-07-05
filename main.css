@@ -1,9 +1,10 @@
+
 html {
     background: url('http://tup1tsa.bounceme.net/images/green_html.jpg');
 }
 body {
     margin: auto;
-    width: 1500px;
+    width: 1000px;
     background: #faf8ef;
 }
 html, body {
@@ -18,16 +19,28 @@ button {
     left: 15px;
 }
 .backgroundCell {
+    position: relative;
     display: table-cell;
-    width: 100px;
-    height: 100px;
-    background: #D1C0BA;
+    margin-left: -10px;
+    margin-top: -10px;
+    width: 110px;
+    height: 110px;
+    background: url('http://tup1tsa.bounceme.net/images/2048cell.png');
+    float: left;
+}
+.cell {
+    position: absolute;
+    display: table-cell;
+    width: 90px;
+    height: 90px;
+    background: darkorange;
     box-sizing: border-box;
-    outline: 10px solid #a38981;
     text-align: center;
     vertical-align: middle;
-    line-height: 100px;
-    font-size: 75px;
+    line-height: 90px;
+    font-size: 40px;
+    z-index: 2;
+    color: whitesmoke;
 }
 .clear {
     clear: left;
@@ -37,3 +50,46 @@ button {
     position: relative;
     left: 275px;
 }
+[data-value='2'] {
+    background: rgb(238, 238, 218)
+}
+[data-value='4'] {
+    background: rgb(237, 224, 200)
+}
+[data-value='8'] {
+    background: #f2b179
+}
+[data-value='16'] {
+    background: #f59563
+}
+[data-value='32'] {
+    background: #f67c5f;
+}
+[data-value='64'] {
+    background: #f65e3b
+}
+[data-value='128'] {
+    background:  #edcf72;
+}
+[data-value='256'] {
+    background:  #edcc61;
+}
+[data-value='512'] {
+    background:  #edc850;
+}
+[data-value='1024'] {
+    background:  #edc53f;
+}
+[data-value='2048'] {
+    background:  #edc22e;
+}
+[data-value='2'], [data-value='4'] {
+    color: #776e65
+}
+[data-value='128'], [data-value='256'], [data-value='512'] {
+    font-size: 50px;
+}
+[data-value='2'], [data-value='4'], [data-value='16'], [data-value='32'], [data-value='8'], [data-value='64'] {
+    font-size: 75px
+}
+
