@@ -10,12 +10,20 @@
     </head>
     <body>
         <div id="settings">
-            <div>Choose ur settings</div>
+            <div>Choose field size, click start</div>
             <button  type="button" onclick="game.setFieldSize(4)">4*4</button>
             <button  type="button" onclick="game.setFieldSize(5)">5*5</button>
             <button  type="button" onclick="game.setFieldSize(6)">6*6</button>
             <button  type="button" onclick="game.setFieldSize(8)">8*8</button>
-            <button id="startButton" type="button" onclick="game.start()">Start game</button>
+            <button id="startButton" type="button" onclick="game.start()">Start</button>
+        </div>
+        <div id="score">
+            <div id="topScore">
+                <p>Top score - <span id="topScoreValue">0</span></p>
+            </div>
+            <div id="currentScore">
+                <p>Current score - <span id="currentScoreValue">0</span></p>
+            </div>
         </div>
         <div id="gameContainer">
 

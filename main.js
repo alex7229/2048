@@ -28,7 +28,7 @@ class Game {
         }
         Draw.background(this.fieldSize);
         Draw.cells(this.field);
-
+        score.reset()
     }
 
     fillRandomCell () {
@@ -106,6 +106,7 @@ class Game {
         } else if (currentCell.value) {
             if (this.mergingCell.value === currentCell.value) {
                 this.mergingCell.value *= 2;
+                score.addScore(this.mergingCell.value);
                 this.mergingCell = undefined;
                 currentCell.value = 0;
             } else {
@@ -220,6 +221,49 @@ class Draw {
     }
 }
 
+class Score {
+    
+    constructor () {
+        this.topScore = 0;
+        this.currentScore = 0;
+        this.multiplier = 0;
+        this.stepScore = 0;
+    }
+    
+    getTopScore () {
+        if (localStorage.topScore2048) {
+            this.topScore = localStorage.topScore2048
+        }
+    }
+
+    update () {
+        $('#topScoreValue').html(this.topScore);
+        $('#currentScoreValue').html(this.currentScore);
+        console.log('updating')
+    }
+
+    addScore (value) {
+        this.stepScore+=value;
+        this.multiplier++
+    }
+
+    endStep () {
+        this.currentScore+=this.stepScore*this.multiplier;
+        this.stepScore = 0;
+        this.multiplier = 0;
+        if (this.currentScore>this.topScore) {
+            this.topScore = this.currentScore;
+            localStorage.topScore2048 = this.topScore
+        }
+        this.update()
+    }
+
+    reset () {
+        this.currentScore = 0;
+    }
+    
+}
+
 class Controller {
 
     static listenArrowKeys () {
@@ -244,6 +288,7 @@ class Controller {
             }
             Draw.background(game.fieldSize);
             Draw.cells(game.field);
+            score.endStep();
         }
     }
 
@@ -251,6 +296,15 @@ class Controller {
 
 
 let game = new Game();
-$(document).ready(() => {
-    Controller.listenArrowKeys()
+
+let score = new Score();
+
+Controller.listenArrowKeys();
+
+$(document).ready(()=> {
+    score.getTopScore();
+    score.update()
 });
+
+
+
