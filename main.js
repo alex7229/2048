@@ -25,13 +25,9 @@ class Game {
                 }
             }
         }
-        for (let i=0; i<32; i++) {
+        for (let i=0; i<10; i++) {
             this.fillRandomCell();
         }
-        /*this.field[0][0].value = 2;
-        this.field[0][1].value = 2;
-        this.field[0][2].value = 4;
-        this.field[0][3].value = 4;*/
         Draw.background(this.fieldSize);
         Draw.cells(this.field);
         score.reset()
@@ -53,54 +49,39 @@ class Game {
     }
 
     countEmptyCells () {
-        let number = 0;
-        this.field.forEach(row  => {
-            row.forEach( cell => {
-                if (cell.value === 0) {
-                    number++
-                }
+        return this.field.reduce((allRows, currentRow) => {
+            return allRows.concat(currentRow)
+        }, []).filter(cell => {
+            return cell.value === 0
+        }).length;
+    }
+
+    mergeLeft(reverse) {
+        this.field.forEach(row => {
+            this.mergingCell = undefined;
+            let cells = row;
+            if (reverse) {
+                cells = row.slice().reverse()
+            }
+            cells.forEach(cell => {
+                this.merge(cell)
             })
-        });
-        return number
+        })
     }
 
-    mergeLeft () {
-        this.field.forEach(row => {
-            this.mergingCell = undefined;
-            for (let column=0; column<this.fieldSize; column++) {
-                let cell = row[column];
-                this.merge(cell);
-            }
-        });
-    }
-
-    mergeRight () {
-        this.field.forEach(row => {
-            this.mergingCell = undefined;
-            for (let column=this.fieldSize-1; column>=0; column--) {
-                let cell = row[column];
-                this.merge(cell);
-            }
-        });
-    }
-
-    mergeUp () {
+    mergeUp(reverse) {
         for (let column = 0; column<this.fieldSize; column++) {
             this.mergingCell = undefined;
+            let cells = [];
             for (let row = 0; row<this.fieldSize; row++) {
-                let cell = this.field[row][column];
-                this.merge(cell)
+                cells.push(this.field[row][column]);
             }
-        }
-    }
-
-    mergeDown () {
-        for (let column = 0; column<this.fieldSize; column++) {
-            this.mergingCell = undefined;
-            for (let row = this.fieldSize-1; row>=0; row--) {
-                let cell = this.field[row][column];
-                this.merge(cell)
+            if (reverse) {
+                cells = cells.reverse()
             }
+            cells.forEach(cell => {
+                this.merge(cell)
+            })
         }
     }
 
@@ -133,52 +114,36 @@ class Game {
         }
     }
 
-    moveLeft () {
+    moveLeft (reverse) {
         this.field.forEach(row => {
-            this.sort(row)
-        })
-    }
-
-    moveRight() {
-        this.field.forEach(row => {
-            let reverseRow = [];
-            for (let column = row.length-1; column>=0; column --) {
-                reverseRow.push(row[column])
+            if (reverse) {
+                this.sort(row.slice().reverse())
+            } else {
+                this.sort(row)
             }
-            this.sort(reverseRow)
         })
     }
 
-    moveUp() {
+    moveUp(reverse) {
         for (let column = 0; column<this.fieldSize; column++) {
             let cells = [];
             for (let row = 0; row<this.fieldSize; row++) {
                 let cell = this.field[row][column];
                 cells.push(cell)
             }
-            this.sort(cells)
-        }
-    }
-
-    moveDown() {
-        for (let column = 0; column<this.fieldSize; column++) {
-            let cells = [];
-            for (let row = this.fieldSize-1; row>=0; row--) {
-                let cell = this.field[row][column];
-                cells.push(cell)
+            if (reverse) {
+                this.sort(cells.slice().reverse())
+            } else {
+                this.sort(cells)
             }
-            this.sort(cells)
         }
     }
 
     sort (cells) {
-        let numberCellsCount = 0;
+        let numberCellsCount = cells.filter(cell => {
+            return cell.value
+        }).length;
         let moveBlocks = 0;
-        cells.forEach(cell => {
-            if (cell.value) {
-                numberCellsCount++
-            }
-        });
         if (numberCellsCount === 0 || numberCellsCount === cells.length) return;
         for (let i=0; i<cells.length; i++) {
             if (cells[i].value === 0) {
@@ -197,11 +162,11 @@ class Game {
     }
 
     resetMoveData () {
-        this.field.forEach(row => {
-            row.forEach(cell => {
-                cell.moveBlocks = 0
-            })
-        })
+        this.field.reduce((allRows, currentRow) => {
+            return allRows.concat(currentRow)
+        }, []).map(cell => {
+            cell.moveBlocks = 0
+        });
     }
 
     saveFieldAsString () {
@@ -215,17 +180,12 @@ class Game {
         }
     }
 
-    checkUnmovedCells () {
-        let unmovedCells = false;
-        this.field.forEach(row => {
-            row.forEach(cell => {
-                if (cell.moveBlocks) {
-                    unmovedCells  = true;
-                }
-            })
-        });
-        console.log(unmovedCells);
-        return unmovedCells
+    findUnmovedCellsCount () {
+        return this.field.reduce((allRows, currentRow) => {
+            return allRows.concat(currentRow)
+        }, []).filter(cell => {
+            return cell.moveBlocks
+        }).length;
     }
 
 }
@@ -281,15 +241,14 @@ class Draw {
     static cells (field) {
         let container = $('#gameContainer');
         let cellsHTML = ``;
-        field.forEach(row => {
-            row.forEach(cell => {
-                if (cell.value) {
-                    let position = `left:${cell.column*100}px;top:${cell.row*100}px`;
-                    let id = `row${cell.row}column${cell.column}`;
-                    cellsHTML+=`<div class="cell" data-value="${cell.value}" id="${id}" style="${position}">${cell.value}</div>`
-                }
-
-            })
+        field.reduce((previousRow, currentRow) => {
+            return previousRow.concat(currentRow)
+        }, []).filter(cell => {
+            return cell.value
+        }).map(cell => {
+            let position = `left:${cell.column * 100}px;top:${cell.row * 100}px`;
+            let id = `row${cell.row}column${cell.column}`;
+            cellsHTML += `<div class="cell" data-value="${cell.value}" id="${id}" style="${position}">${cell.value}</div>`
         });
         container.append(cellsHTML)
     }
@@ -353,15 +312,15 @@ class Controller {
                 game.moveUp();
                 game.moveDirection = 'up'
             } else if (key === 39) {
-                //game.mergeRight();
-                game.moveRight();
+                game.mergeLeft('reverse');
+                game.moveLeft('reverse');
                 game.moveDirection = 'right'
             } else if (key === 40) {
-                game.mergeDown();
-                game.moveDown();
+                game.mergeUp('reverse');
+                game.moveUp('reverse');
                 game.moveDirection = 'down'
             }
-            function move() {
+            /*function move() {
                 Draw.move(game.field, game.moveDirection);
                 function lasti () {
                     Draw.background(game.fieldSize);
@@ -383,7 +342,9 @@ class Controller {
                 setTimeout(anotherMove, 1000);
                 setTimeout(finalDraw, 1500)
             }
-            move();
+            move();*/
+            Draw.background(game.fieldSize);
+            Draw.cells(game.field);
             score.endStep();
         }
     }
@@ -401,6 +362,4 @@ $(document).ready(()=> {
     score.getTopScore();
     score.update();
 });
-
-
 
