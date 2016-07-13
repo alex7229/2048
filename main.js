@@ -4,7 +4,8 @@ class Game {
         this.field = [];
         this.fieldSize = 4;
         this.mergingCell;
-        this.moveDirection;
+        this.animationSpeed = 25;
+        this.animationInProgress = false;
     }
     
     setFieldSize (size) {
@@ -25,12 +26,72 @@ class Game {
                 }
             }
         }
-        for (let i=0; i<10; i++) {
+        for (let i=0; i<2; i++) {
             this.fillRandomCell();
         }
         Draw.background(this.fieldSize);
         Draw.cells(this.field);
         score.reset()
+    }
+
+    pushButton (direction) {
+        if (this.animationInProgress) return;
+        this.animationInProgress = true;
+        this.resetMoveData();
+        this.saveFieldAsString();
+        let self = this;
+        let fieldState = this.saveFieldAsString();
+
+        // Three steps (timeOuts): move cells, then merge, then move again. In each step calculate field, then draw via jquery
+
+
+        function move () {
+            if ((direction === 'left') || (direction === 'right')) {
+                self.moveHorizontal(direction);
+            }  else if ((direction === 'up') || (direction === 'down')) {
+                self.moveVertical(direction);
+            }
+            Draw.move(self.field, direction, self.animationSpeed);
+        }
+
+        function merge() {
+            if (direction === 'left' || direction === 'right') {
+                self.mergeHorizontal(direction);
+            }  else if (direction === 'up' || direction === 'down') {
+                self.mergeVertical(direction);
+            }
+            Draw.move(self.field, direction, self.animationSpeed);
+        }
+
+
+
+        move();
+
+        setTimeout(() => {
+            Draw.background(this.fieldSize);
+            Draw.cells(this.field);
+            this.resetMoveData();
+            merge();
+
+
+            setTimeout( () => {
+                Draw.background(this.fieldSize);
+                Draw.cells(this.field);
+                this.resetMoveData();
+                move();
+
+                setTimeout( () => {
+                    if (this.checkFieldChanges()) {
+                        this.fillRandomCell()
+                    }
+                    this.resetMoveData();
+                    score.endStep();
+                    Draw.background(this.fieldSize);
+                    Draw.cells(this.field);
+                    this.animationInProgress = false;
+                },this.findAnimationTime())
+            }, this.findAnimationTime());
+        }, this.findAnimationTime());
     }
 
     fillRandomCell () {
@@ -56,11 +117,11 @@ class Game {
         }).length;
     }
 
-    mergeLeft(reverse) {
+    mergeHorizontal(direction) {
         this.field.forEach(row => {
             this.mergingCell = undefined;
             let cells = row;
-            if (reverse) {
+            if (direction === 'right') {
                 cells = row.slice().reverse()
             }
             cells.forEach(cell => {
@@ -69,14 +130,14 @@ class Game {
         })
     }
 
-    mergeUp(reverse) {
+    mergeVertical(direction) {
         for (let column = 0; column<this.fieldSize; column++) {
             this.mergingCell = undefined;
             let cells = [];
             for (let row = 0; row<this.fieldSize; row++) {
                 cells.push(this.field[row][column]);
             }
-            if (reverse) {
+            if (direction === 'down') {
                 cells = cells.reverse()
             }
             cells.forEach(cell => {
@@ -114,26 +175,26 @@ class Game {
         }
     }
 
-    moveLeft (reverse) {
+    moveHorizontal (direction) {
         this.field.forEach(row => {
-            if (reverse) {
+            if (direction === 'right') {
                 this.sort(row.slice().reverse())
-            } else {
+            } else if (direction === 'left') {
                 this.sort(row)
             }
         })
     }
 
-    moveUp(reverse) {
+    moveVertical(direction) {
         for (let column = 0; column<this.fieldSize; column++) {
             let cells = [];
             for (let row = 0; row<this.fieldSize; row++) {
                 let cell = this.field[row][column];
                 cells.push(cell)
             }
-            if (reverse) {
+            if (direction === 'down') {
                 this.sort(cells.slice().reverse())
-            } else {
+            } else if (direction === 'up') {
                 this.sort(cells)
             }
         }
@@ -169,6 +230,21 @@ class Game {
         });
     }
 
+    findAnimationTime () {
+        let maximum = 0;
+        this.field.reduce((previousRows, currentRow) => {
+            return previousRows.concat(currentRow)
+        }, []).filter (cell => {
+            return cell.moveBlocks
+        }).forEach(cell => {
+            if (cell.moveBlocks>maximum) {
+                maximum = cell.moveBlocks
+            }
+        });
+        //each number moves with speed 1cell per {animationSpeed} ms
+        return maximum*this.animationSpeed
+    }
+
     saveFieldAsString () {
         this.fieldString = JSON.stringify(this.field);
     }
@@ -192,33 +268,34 @@ class Game {
 
 class Draw {
 
-    static move (field, direction) {
-        field.forEach(row => {
-            row.forEach(cell => {
-                let id = `#row${cell.row}column${cell.column}`;
-                if (cell.moveBlocks) {
-                    if (direction === 'down') {
-                        $(id).animate({
-                            top: (cell.row+1)*100
-                        }, 500)
-                    } else if (direction === 'up') {
-                        $(id).animate({
-                            top: (cell.row-1)*100
-                        }, 500)
-                    } else if (direction === 'left') {
-                        $(id).animate({
-                            left: (cell.column-1)*100
-                        }, 500)
-                    } else if (direction === 'right') {
-                        $(id).animate({
-                            left: (cell.column+cell.moveBlocks)*100
-                        }, 500)
-                    }
-                } else if (cell.isMerged) {
-                    cell.isMerged = false;
-                    $(id).css('display', 'none')
-                }
-            })
+    static move (field, direction, speed) {
+        let unmovedCells = field.reduce ((prevRows, currentRow) => {
+            return prevRows.concat(currentRow)
+        }, []).filter(cell => {
+            return cell.moveBlocks
+        }).map(cell => {
+            let id = `#row${cell.row}column${cell.column}`;
+            let $animation = {
+                duration: cell.moveBlocks*speed,
+                easing: 'linear'
+            };
+            if (direction === 'down') {
+                $(id).animate({
+                    top: (cell.row+cell.moveBlocks)*100
+                }, $animation)
+            } else if (direction === 'up') {
+                $(id).animate({
+                    top: (cell.row-cell.moveBlocks)*100
+                }, $animation)
+            } else if (direction === 'left') {
+                $(id).animate({
+                    left: (cell.column-cell.moveBlocks)*100
+                }, $animation)
+            } else if (direction === 'right') {
+                $(id).animate({
+                    left: (cell.column+cell.moveBlocks)*100
+                }, $animation)
+            }
         })
     }
 
@@ -240,16 +317,15 @@ class Draw {
 
     static cells (field) {
         let container = $('#gameContainer');
-        let cellsHTML = ``;
-        field.reduce((previousRow, currentRow) => {
+        let cellsHTML = field.reduce((previousRow, currentRow) => {
             return previousRow.concat(currentRow)
         }, []).filter(cell => {
             return cell.value
         }).map(cell => {
             let position = `left:${cell.column * 100}px;top:${cell.row * 100}px`;
             let id = `row${cell.row}column${cell.column}`;
-            cellsHTML += `<div class="cell" data-value="${cell.value}" id="${id}" style="${position}">${cell.value}</div>`
-        });
+            return `<div class="cell" data-value="${cell.value}" id="${id}" style="${position}">${cell.value}</div>`
+        }).join('');
         container.append(cellsHTML)
     }
 }
@@ -292,60 +368,25 @@ class Score {
 
     reset () {
         this.currentScore = 0;
+        this.update()
     }
     
 }
 
 class Controller {
 
-    static listenArrowKeys () {
+    static listenArrowKeys (game) {
         document.onkeydown = e => {
             let key = e.keyCode;
-            game.resetMoveData();
-            game.saveFieldAsString();
             if (key === 37) {
-                game.mergeLeft();
-                game.moveLeft();
-                game.moveDirection = 'left'
+                game.pushButton('left')
             } else if (key === 38) {
-                game.mergeUp();
-                game.moveUp();
-                game.moveDirection = 'up'
+                game.pushButton('up')
             } else if (key === 39) {
-                game.mergeLeft('reverse');
-                game.moveLeft('reverse');
-                game.moveDirection = 'right'
+                game.pushButton('right')
             } else if (key === 40) {
-                game.mergeUp('reverse');
-                game.moveUp('reverse');
-                game.moveDirection = 'down'
+                game.pushButton('down')
             }
-            /*function move() {
-                Draw.move(game.field, game.moveDirection);
-                function lasti () {
-                    Draw.background(game.fieldSize);
-                    Draw.cells(game.field);
-                    game.mergeRight();
-                    Draw.move(game.field, game.moveDirection)
-                }
-                function anotherMove() {
-                    Draw.background(game.fieldSize);
-                    Draw.cells(game.field);
-                    game.moveRight();
-                    Draw.move(game.field, game.moveDirection)
-                }
-                function finalDraw() {
-                    Draw.background(game.fieldSize);
-                    Draw.cells(game.field);
-                }
-                setTimeout(lasti, 500);
-                setTimeout(anotherMove, 1000);
-                setTimeout(finalDraw, 1500)
-            }
-            move();*/
-            Draw.background(game.fieldSize);
-            Draw.cells(game.field);
-            score.endStep();
         }
     }
 
@@ -356,10 +397,9 @@ let game = new Game();
 
 let score = new Score();
 
-Controller.listenArrowKeys();
+Controller.listenArrowKeys(game);
 
 $(document).ready(()=> {
     score.getTopScore();
     score.update();
 });
-
