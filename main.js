@@ -3,7 +3,6 @@ class Game {
     constructor () {
         this.field = [];
         this.fieldSize = 4;
-        this.mergingCell;
         this.animationSpeed = 25;
         this.animationInProgress = false;
     }
@@ -39,59 +38,62 @@ class Game {
         this.animationInProgress = true;
         this.resetMoveData();
         this.saveFieldAsString();
-        let self = this;
-        let fieldState = this.saveFieldAsString();
 
         // Three steps (timeOuts): move cells, then merge, then move again. In each step calculate field, then draw via jquery
+        this.moveWholeField(direction)
+            .then(() => {
+                return this.mergeWholeField(direction)
+            }).then( () => {
+                return this.moveWholeField(direction)
+            }).then( () => {
+                this.finishStep();
+            }, err => {
+                throw err
+            });
+    }
 
-
-        function move () {
+    moveWholeField (direction) {
+        return new Promise ( (resolve) => {
             if ((direction === 'left') || (direction === 'right')) {
-                self.moveHorizontal(direction);
+                this.moveHorizontal(direction);
             }  else if ((direction === 'up') || (direction === 'down')) {
-                self.moveVertical(direction);
+                this.moveVertical(direction);
             }
-            Draw.move(self.field, direction, self.animationSpeed);
-        }
+            Draw.move(this.field, direction, this.animationSpeed);
+            setTimeout(() => {
+                Draw.background(this.fieldSize);
+                Draw.cells(this.field);
+                this.resetMoveData();
+                resolve (true)
+            }, this.findAnimationTime())
+        })
+    }
 
-        function merge() {
+    mergeWholeField(direction) {
+        return new Promise (resolve => {
             if (direction === 'left' || direction === 'right') {
-                self.mergeHorizontal(direction);
+                this.mergeHorizontal(direction);
             }  else if (direction === 'up' || direction === 'down') {
-                self.mergeVertical(direction);
+                this.mergeVertical(direction);
             }
-            Draw.move(self.field, direction, self.animationSpeed);
-        }
-
-
-
-        move();
-
-        setTimeout(() => {
-            Draw.background(this.fieldSize);
-            Draw.cells(this.field);
-            this.resetMoveData();
-            merge();
-
-
+            Draw.move(this.field, direction, this.animationSpeed);
             setTimeout( () => {
                 Draw.background(this.fieldSize);
                 Draw.cells(this.field);
                 this.resetMoveData();
-                move();
+                resolve(true)
+            }, this.findAnimationTime())
+        });
+    }
 
-                setTimeout( () => {
-                    if (this.checkFieldChanges()) {
-                        this.fillRandomCell()
-                    }
-                    this.resetMoveData();
-                    score.endStep();
-                    Draw.background(this.fieldSize);
-                    Draw.cells(this.field);
-                    this.animationInProgress = false;
-                },this.findAnimationTime())
-            }, this.findAnimationTime());
-        }, this.findAnimationTime());
+    finishStep () {
+        score.endStep();
+        this.animationInProgress = false;
+        if (this.checkFieldChanges()) {
+            this.fillRandomCell()
+        }
+        Draw.background(this.fieldSize);
+        Draw.cells(this.field);
     }
 
     fillRandomCell () {
@@ -178,9 +180,9 @@ class Game {
     moveHorizontal (direction) {
         this.field.forEach(row => {
             if (direction === 'right') {
-                this.sort(row.slice().reverse())
+                Game.sort(row.slice().reverse())
             } else if (direction === 'left') {
-                this.sort(row)
+                Game.sort(row)
             }
         })
     }
@@ -193,14 +195,14 @@ class Game {
                 cells.push(cell)
             }
             if (direction === 'down') {
-                this.sort(cells.slice().reverse())
+                Game.sort(cells.slice().reverse())
             } else if (direction === 'up') {
-                this.sort(cells)
+                Game.sort(cells)
             }
         }
     }
 
-    sort (cells) {
+    static sort (cells) {
         let numberCellsCount = cells.filter(cell => {
             return cell.value
         }).length;
@@ -255,21 +257,12 @@ class Game {
             return true
         }
     }
-
-    findUnmovedCellsCount () {
-        return this.field.reduce((allRows, currentRow) => {
-            return allRows.concat(currentRow)
-        }, []).filter(cell => {
-            return cell.moveBlocks
-        }).length;
-    }
-
 }
 
 class Draw {
 
     static move (field, direction, speed) {
-        let unmovedCells = field.reduce ((prevRows, currentRow) => {
+        field.reduce ((prevRows, currentRow) => {
             return prevRows.concat(currentRow)
         }, []).filter(cell => {
             return cell.moveBlocks
