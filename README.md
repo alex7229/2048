@@ -1,2 +1,2 @@
 # 2048
-finished
+Demo: https://2048-jquery.netlify.com/
